@@ -57,8 +57,8 @@ fork_pipes (int n, struct command *cmd)
 int
 main ()
 {
-  const char *ls[] = { "ls", "-l", 0 };
-  const char *awk[] = { "awk", "{print $9}", 0 };
+  const char *ls[] = { "ls", "-l",0 };
+  const char *awk[] = { "awk", "{print $9}",0 };
   const char *sort[] = { "sort", 0 };
   const char *uniq[] = { "uniq", "-u", 0 };
 

@@ -253,26 +253,39 @@ char *sh_read_line(void) {
 // on whitespace, |, >, < delimiters.  We can use strtok to do much of the work
 // for us
 // We will again, use a buffer and dynamically expand as needed
+
 char **sh_line_split(char *line) {
     int buf_s = TOKEN_BUFSIZE;
     int maxcmds = 10;
     int posidx = 0;
-    int cmdno = 0;
-    int len, i;
-    char *ptr;
+    // int cmdno = 0;
+    // int len, i;
+    // int p_count;
+    // char *ptr;
+    // char **tkns;
     char **tkns = malloc(maxcmds * sizeof(char*));
     char *tkn;
-    char *copy = strdup(line);
-    char del;
+    // char *copy = strdup(line);
+    // char del;
     
-    // allocate 2D array for list of commands
-    len = sizeof(char *) * maxcmds + sizeof(char) * buf_s * maxcmds;
-    tkns = (char **)malloc(len); 
+    // // Duplicate string
+    // // char *strlen = malloc(strlen(line) + 1);
+    // char *strCopy = strdup(line);
+    // // printf("\ndup%s", strCopy);
 
-    // for loop to point rows pointer to appropriate location in 2D array 
-    for(i = 0; i < maxcmds; i++) 
-        tkns[i] = (ptr + buf_s * i);
-
+    // // printf("\n%s", line);
+    // // Figure out how many individual commands are present in input
+    // for(p_count=0; strCopy[p_count]; strCopy[p_count]=='|' ? p_count++ : *strCopy++);
+    // // printf("%i", p_count);
+    // cmds = p_count + 1;
+    // // printf("\nyunk%s", line);
+    // // free(strCopy);
+    
+    // // Allocate space for 2D array based of of number of commands
+    // tkns = (char **)malloc(cmds * sizeof(char *)); 
+    // for (i=0; i<cmds; i++) 
+    //      tkns[i] = (char *)malloc(buf_s * sizeof(char)); 
+    
     // allocation failure check
     if (!tkns) {
         fprintf(stderr, "shell error when allocating memory\n");
@@ -281,17 +294,30 @@ char **sh_line_split(char *line) {
 
     // get first token
     tkn = strtok(line, TOKEN_DELIMITER);
+    
 
     //walk through other tokens
     while(tkn != NULL) {
         // printf("%s\n", tkn);
         // printf("%c\n", del);
-
-        tkns[cmdno][posidx] = *tkn;
+        // printf("\nyunk1");
+        // printf("\n%s", tkn);
+        tkns[posidx] = tkn;
+        // char *strCopy = strdup(line);
+        // printf("\nduptkn\n%s", tkns[cmdno]);
+        // printf("\nyunk2");
+        // int c = 0;
+        // // printf("\n\n\n", &tkns[cmdno][posidx]);
+        // printf("\n\n\n");
+        // while (tkns[cmdno][posidx] != '\0') {
+        //     printf("%s", tkns[cmdno][posidx]);
+        //     tkns[cmdno][posidx]++;
+        // }
         posidx++;
         if (posidx >= buf_s) {
             buf_s += TOKEN_BUFSIZE;
             tkns = realloc(tkns, buf_s * sizeof(char*));
+            // printf("\nyunk3");
             
             // reallocation failure check
             if (!tkns) {
@@ -299,17 +325,48 @@ char **sh_line_split(char *line) {
                 exit(EXIT_FAILURE);
             }
         }
-
+        // printf("\nyunk4");
         // figure out the delimiter used to know when to split commands
-        del = copy[tkn-line+strlen(tkn)];
+        // del = copy[tkn-line+strlen(tkn)];
 
-        if(del == '|') {
-            cmdno++;
-            posidx = 0;
-        }
+        // printf("\nyunk5");
+
+        // if(del == '|') {
+        //     printf("\nyunk |");
+        //     cmdno++;
+        //     posidx = 0;
+        // }
         // get next token
         tkn = strtok(NULL, TOKEN_DELIMITER);
+        // printf("\n%s", tkn);
     }
+
+    // int k, j;
+    // for (k = 0; k <  maxcmds; k++) 
+    //   for (j = 0; j < buf_s; j++) 
+    //      printf("%s ", *tkns[k][j]); 
+    // while ( *tkns ) printf( "%s\n", *tkns++ );
+    // int x, y;
+    // for(x=0;x<cmds;x++) {
+    //     print(tkns[x]);
+    // }
+
+    // printf("final");
+    // for (x = 0; x != maxcmds; x++)
+    // {
+    //     printf("\n");
+    //     for(y = 0; tkns[x][y] != '\0'; y++)
+    //     {
+    //         printf("%c", tkns[x][y]);
+    //         // int c = 0;
+    //         // while (tkns[x][y][c] != '\0') {
+    //         //     printf("%c", tkns[x][y][c]);
+    //         //     c++;
+    //         // }
+    //     }
+    // }
+    
+
     // put null as last value in tokens
     tkns[posidx] = NULL;
     // int i;
@@ -339,6 +396,7 @@ void intcmd_loop() {
 
         // Read command
         line = sh_read_line();
+        // printf("%s", line);
 
         // Parse command
         args = sh_line_split(line);
