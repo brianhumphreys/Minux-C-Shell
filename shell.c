@@ -10,7 +10,7 @@
 #define TOKEN_DELIMITER "|"
 #define INPUT_MAX 64
 
-int single_spawn(char **argv)
+int single_spawn(char **argv, int bg)
 {
     if (!strcmp(argv[0], "exit"))
     {
@@ -38,7 +38,7 @@ int single_spawn(char **argv)
           printf("executed successfully\n\n");
         }
         exit(EXIT_FAILURE);
-    } else if (pid > 0) {
+    } else if (pid > 0 && !bg) {
         // printf("I am the parent\n");
         // Parent process will land here and wait
         do {
@@ -96,7 +96,7 @@ int single_spawn(char **argv)
 // }
 
 int
-pipe_spawn (int in, int out, char** argv, bool last)
+pipe_spawn (int in, int out, char** argv, bool last, int bg)
 {
     if (!strcmp(argv[0], "exit"))
     {
@@ -143,13 +143,13 @@ pipe_spawn (int in, int out, char** argv, bool last)
         exit(EXIT_FAILURE);
       }
       // exit(EXIT_FAILURE);
-  } else if(pid > 0) {
+  } else if(pid > 0 && !bg) {
     // parent process
     // printf("I am a parent\n");
     do {
       wpid = waitpid(pid, &status, WUNTRACED);
     } while (!WIFEXITED(status) && !WIFSIGNALED(status)); // checks for signal to kill or signal that child process is completed
-    // printf("I have waited for child\n");
+    printf("I have waited for child\n");
   } else {
       // There was an error forking
     //   printf("yun4");
@@ -226,7 +226,7 @@ void printPP(int argc, char ** argv)
 }
 
 int
-fork_pipes3 (char* line)
+fork_pipes3 (char* line, bool bg)
 {
   int i;
   
@@ -260,7 +260,7 @@ fork_pipes3 (char* line)
       pipe (fd);
 
       // f [1] is the write end of the pipe, we carry `in` from the prev iteration.  */
-      pipe_spawn(in, fd [1], argv, i==n);
+      pipe_spawn(in, fd [1], argv, false, bg);
 
       // No need for the write end of the pipe, the child will write here.  */
       close (fd [1]);
@@ -277,7 +277,7 @@ fork_pipes3 (char* line)
       and output to the original file descriptor 1. */  
     // if (in != 0)
     //   dup2 (in, 0);
-    pipe_spawn(in, fd [1], argv, true);
+    pipe_spawn(in, fd [1], argv, true, bg);
     // printf("We are out mf\n");
     return 1;
   } else {
@@ -285,7 +285,7 @@ fork_pipes3 (char* line)
 
     argv = parsedargs(tkn, &ac);
 
-    return single_spawn(argv);
+    return single_spawn(argv, bg);
   }
   
 }
@@ -346,10 +346,12 @@ fork_pipes3 (char* line)
   
 // }
 
-void intcmd_loop() {
+void interp_cmd_loop() {
     int status;
+    
 
     do {
+        int bg=0;
         char line[INPUT_MAX];
         // // Print path to current working directory
         char cwd[1024];
@@ -359,9 +361,15 @@ void intcmd_loop() {
 
         // Read command
         fgets(line, INPUT_MAX, stdin);
-        
+        // printf("YUNK: %d\n", line[strlen(line)-2]=='&');
+        if(line[strlen(line)-2]=='&')
+            {
+              bg = 1;
+              line[strlen(line) - 2] = '\0';
+            //   printf("YUNK2: %s\n", line);
+            }
         // fork and pipe (if more than 1 command)
-        status = fork_pipes3(line);
+        status = fork_pipes3(line, bg);
 
 
     } while (status);
@@ -370,7 +378,7 @@ void intcmd_loop() {
 int
 main ()
 {
-  intcmd_loop();
+  interp_cmd_loop();
   
   return 1;
 }
