@@ -10,8 +10,14 @@
 #define TOKEN_DELIMITER "|"
 #define INPUT_MAX 64
 
-int sh_spawn(char **argv)
+int single_spawn(char **argv)
 {
+    if (!strcmp(argv[0], "exit"))
+    {
+        exit(0);
+    }
+
+
     pid_t pid, wpid;
     int status;
 
@@ -21,6 +27,7 @@ int sh_spawn(char **argv)
     // and same files.
     // They will run together until the parent uses waitpid to wait for the child process to 
     // finish.  
+    
     pid = fork();
     if (pid == 0) {
         // Then the child process is running
@@ -46,51 +53,55 @@ int sh_spawn(char **argv)
     return 1;
 }
 
-int sh_spawn_loop(char **argv)
-{
-    pid_t pid, wpid;
-    int status=0;
-    // printf("we get here!\n");
-    // fork cuase a duplicate process to be made
-    // after this system call, the processes will run concurrently,
-    // using same program counter (for asm instr), same CPU and same
-    // and same files.
-    // They will run together until the parent uses waitpid to wait for the child process to 
-    // finish.  
-    pid = fork();
-    if (pid == 0) {
-        // Then the child process is running
-        // if (execvp(argv[0], argv) == -1) {
-        //     perror("shell\n\n");
-        // } else {
-        //   printf("executed successfully\n\n");
-        // }
-        // exit(EXIT_FAILURE);
-        // printf("last one\n");
-        int ret = execv (*argv, (char * const *)argv);
-    } else if (pid > 0) {
-        // Parent process will land here and wait
-        do {
-            wpid = waitpid(pid, &status, WUNTRACED);
-        } while (!WIFEXITED(status) && !WIFSIGNALED(status)); // checks for signal to kill or signal that child process is completed
-    } else {
-        // There was an error forking
-        perror("shell");
-    }
-    return 1;
-    // } 
-    // wait(&status);
-    // if(status < 0)
-    //     perror("Abnormal exit of program ls");
-    // else
-    //     printf("Exit Status of ls is %d",status);
-    // return 1;
+// int single_spawn_loop(char **argv)
+// {
+//     pid_t pid, wpid;
+//     int status=0;
+//     // printf("we get here!\n");
+//     // fork cuase a duplicate process to be made
+//     // after this system call, the processes will run concurrently,
+//     // using same program counter (for asm instr), same CPU and same
+//     // and same files.
+//     // They will run together until the parent uses waitpid to wait for the child process to 
+//     // finish.  
+//     pid = fork();
+//     if (pid == 0) {
+//         // Then the child process is running
+//         // if (execvp(argv[0], argv) == -1) {
+//         //     perror("shell\n\n");
+//         // } else {
+//         //   printf("executed successfully\n\n");
+//         // }
+//         // exit(EXIT_FAILURE);
+//         // printf("last one\n");
+//         int ret = execv (*argv, (char * const *)argv);
+//     } else if (pid > 0) {
+//         // Parent process will land here and wait
+//         do {
+//             wpid = waitpid(pid, &status, WUNTRACED);
+//         } while (!WIFEXITED(status) && !WIFSIGNALED(status)); // checks for signal to kill or signal that child process is completed
+//     } else {
+//         // There was an error forking
+//         perror("shell");
+//     }
+//     return 1;
+//     // } 
+//     // wait(&status);
+//     // if(status < 0)
+//     //     perror("Abnormal exit of program ls");
+//     // else
+//     //     printf("Exit Status of ls is %d",status);
+//     // return 1;
 
-}
+// }
 
 int
-spawn_proc2 (int in, int out, char** argv, bool last)
+pipe_spawn (int in, int out, char** argv, bool last)
 {
+    if (!strcmp(argv[0], "exit"))
+    {
+        exit(0);
+    }
   pid_t pid, wpid;
   int status;
 
@@ -238,6 +249,7 @@ fork_pipes3 (char* line)
 
   tkn = strtok(inputptr, TOKEN_DELIMITER);
   
+  
   /* Note the loop bound, we spawn here all, but the last stage of the pipeline.  */
   if(n>0) {
     for (i = 0; i < n; ++i)
@@ -248,7 +260,7 @@ fork_pipes3 (char* line)
       pipe (fd);
 
       // f [1] is the write end of the pipe, we carry `in` from the prev iteration.  */
-      spawn_proc2(in, fd [1], argv, i==n);
+      pipe_spawn(in, fd [1], argv, i==n);
 
       // No need for the write end of the pipe, the child will write here.  */
       close (fd [1]);
@@ -265,7 +277,7 @@ fork_pipes3 (char* line)
       and output to the original file descriptor 1. */  
     // if (in != 0)
     //   dup2 (in, 0);
-    spawn_proc2(in, fd [1], argv, true);
+    pipe_spawn(in, fd [1], argv, true);
     // printf("We are out mf\n");
     return 1;
   } else {
@@ -273,7 +285,7 @@ fork_pipes3 (char* line)
 
     argv = parsedargs(tkn, &ac);
 
-    return sh_spawn(argv);
+    return single_spawn(argv);
   }
   
 }
@@ -312,7 +324,7 @@ fork_pipes3 (char* line)
 //       pipe (fd);
 
 //       // f [1] is the write end of the pipe, we carry `in` from the prev iteration.  */
-//       spawn_proc2(in, fd [1], argv);
+//       pipe_spawn(in, fd [1], argv);
 
 //       // No need for the write end of the pipe, the child will write here.  */
 //       close (fd [1]);
@@ -329,7 +341,7 @@ fork_pipes3 (char* line)
 //       and output to the original file descriptor 1. */  
 //     if (in != 0)
 //       dup2 (in, 0);
-//     return sh_spawn(argv);
+//     return single_spawn(argv);
   
   
 // }
@@ -347,6 +359,7 @@ void intcmd_loop() {
 
         // Read command
         fgets(line, INPUT_MAX, stdin);
+        
         // fork and pipe (if more than 1 command)
         status = fork_pipes3(line);
 
