@@ -41,6 +41,7 @@ bool parse_input_redir(char** argv) {
         }               
             
     }
+    // printPP(3,argv);
     //if '<' char was found in string inputted by user
     if(in)
     {   
@@ -77,6 +78,7 @@ bool parse_output_redir(char** argv) {
         }
         // printf("end iter\n");      
     }
+    // printPP(3,argv);
     //if '>' char was found in string inputted by user 
     if (out)
     {
@@ -219,6 +221,7 @@ pipe_proc_spawn1 (int in, int out, char** argv, bool last, bool first, int bg)
 
     pid = fork();
     if (pid == 0){
+        // printf("in child");
         // bool is_infile = parse_input_redir(argv);
         // if(first && is_infile) {
         //     printf("first command has redirection\n");
@@ -232,10 +235,14 @@ pipe_proc_spawn1 (int in, int out, char** argv, bool last, bool first, int bg)
         //     //in remains 0
         // } else if 
         if(first) {
-            bool is_infile = parse_input_redir(argv);
+
+            bool isinfile = parse_input_redir(argv);
             // bool is_infile = parse_input_redir(argv);
             // if(!is_infile) {
-
+            if (out != 1){
+                dup2 (out, 1);
+                close (out);
+            }
             // }
 
         } else if(last) {
@@ -294,7 +301,9 @@ pipe_proc_spawn1 (int in, int out, char** argv, bool last, bool first, int bg)
         //     }
         // }
         if(execvp (*argv, (char * const *)argv) == -1) {
-            perror("shell");
+
+            
+            perror("ERROR");
             exit(EXIT_FAILURE);
         } 
     
@@ -303,7 +312,7 @@ pipe_proc_spawn1 (int in, int out, char** argv, bool last, bool first, int bg)
         do {
             wpid = waitpid(pid, &status, WUNTRACED);
         } while (!WIFEXITED(status) && !WIFSIGNALED(status)); // checks for signal to kill or signal that child process is completed
-        printf("I have waited for child\n");
+        // printf("I have waited for child\n");
     } else if(pid<0) {
         // There was an error forking
         perror("Error while forking");
@@ -349,7 +358,7 @@ pipe_proc_spawn (int in, int out, char** argv, bool last, bool first, int bg)
         do {
             wpid = waitpid(pid, &status, WUNTRACED);
         } while (!WIFEXITED(status) && !WIFSIGNALED(status)); // checks for signal to kill or signal that child process is completed
-        printf("I have waited for child\n");
+        // printf("I have waited for child\n");
     } else if(pid<0) {
         // There was an error forking
         perror("Error while forking");
@@ -408,60 +417,60 @@ char **parsedargs(char *args, int *argc)
 int
 fork_pipes (char* line, bool bg)
 {
-  int i;
-  int in, fd [2];
-  char** argv;
-  char* tkn;
-  int n;
+    int i;
+    int in, fd [2];
+    char** argv;
+    char* tkn;
+    int n;
 
-  // copy input line
-  char* inputptr = strdup(line);
-  char* strCopy = strdup(line);
+    // copy input line
+    char* inputptr = strdup(line);
+    char* strCopy = strdup(line);
 
-  for(n=0; strCopy[n]; strCopy[n]=='|' ? n++ : *strCopy++);
+    for(n=0; strCopy[n]; strCopy[n]=='|' ? n++ : *strCopy++);
 
-  /* The first process should get its input from the original file descriptor 0.  */
-  in = 0;
+    /* The first process should get its input from the original file descriptor 0.  */
+    in = 0;
 
-  tkn = strtok(inputptr, TOKEN_DELIMITER);
-  
-  
-  /* Note the loop bound, we spawn here all, but the last stage of the pipeline.  */
-  if(n>0) {
-    for (i = 0; i < n; ++i)
-    {
-      int ac;
-
-      argv = parsedargs(tkn, &ac);
-
-      pipe (fd);
-
-      // f [1] is the write end of the pipe, we carry `in` from the prev iteration.  */
-      pipe_proc_spawn(in, fd [1], argv, false, i==0, bg);
-
-      // No need for the write end of the pipe, the child will write here.  */
-      close (fd [1]);
-
-      // Keep the read end of the pipe, the next child will read from there.  */
-      in = fd [0];
-
-      tkn = strtok(NULL, TOKEN_DELIMITER);
-    }
-    int ac;
-    argv = parsedargs(tkn, &ac);
-    /* Last stage of the pipeline - set stdin be the read end of the previous pipe
-      and output to the original file descriptor 1. */  
+    tkn = strtok(inputptr, TOKEN_DELIMITER);
     
-    pipe_proc_spawn(in, fd [1], argv, true, false, bg);
-    return 1;
-  } else {
-    int ac;
+    
+    /* Note the loop bound, we spawn here all, but the last stage of the pipeline.  */
+    if(n>0) {
+        for (i = 0; i < n; ++i)
+        {
+        int ac;
 
-    argv = parsedargs(tkn, &ac);
+        argv = parsedargs(tkn, &ac);
 
-    return proc_spawn(argv, bg);
-  }
-  
+        pipe (fd);
+
+        // f [1] is the write end of the pipe, we carry `in` from the prev iteration.  */
+        pipe_proc_spawn1(in, fd [1], argv, false, i==0, bg);
+
+        // No need for the write end of the pipe, the child will write here.  */
+        close (fd [1]);
+
+        // Keep the read end of the pipe, the next child will read from there.  */
+        in = fd [0];
+
+        tkn = strtok(NULL, TOKEN_DELIMITER);
+        }
+        int ac;
+        argv = parsedargs(tkn, &ac);
+        /* Last stage of the pipeline - set stdin be the read end of the previous pipe
+        and output to the original file descriptor 1. */  
+        
+        pipe_proc_spawn1(in, fd [1], argv, true, false, bg);
+        return 1;
+    } else {
+        int ac;
+
+        argv = parsedargs(tkn, &ac);
+
+        return proc_spawn(argv, bg);
+    }
+    
 }
 
 void interp_cmd_loop() {
